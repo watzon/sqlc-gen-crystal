@@ -1,0 +1,15 @@
+version: "2"
+plugins:
+  - name: crystal
+    process:
+      cmd: ../../bin/sqlc-gen-crystal
+sql:
+  - engine: sqlite
+    queries: queries.sql
+    schema: schema.sql
+    codegen:
+      - plugin: crystal
+        out: src/db
+        options:
+          package: "test_db"
+          emit_json_tags: false

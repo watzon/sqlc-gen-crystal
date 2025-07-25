@@ -1,0 +1,8 @@
+name: sqlc-gen-crystal-integration-test
+version: 0.1.0
+
+dependencies:
+  db:
+    github: crystal-lang/crystal-db
+  sqlite3:
+    github: crystal-lang/crystal-sqlite3

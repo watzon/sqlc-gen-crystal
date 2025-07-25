@@ -1,0 +1,197 @@
+syntax = "proto3";
+
+package plugin;
+
+message File {
+  string name = 1;
+  bytes contents = 2;
+}
+
+message Override {
+  // name of the type to use, e.g. `github.com/segmentio/ksuid.KSUID` or `mymodule.Type`
+  string code_type = 1;
+  // name of the type to use, e.g. `text`
+  string db_type = 3;
+  
+  // True if the override should apply to a nullable database type
+  bool nullable = 5;
+  
+  // fully qualified name of the column, e.g. `accounts.id`
+  string column = 6;
+  
+  oneof table {
+    Identifier table_rel = 7;
+    Identifier function_rel = 8;
+  }
+  
+  string column_name   = 9;
+  PythonType python_type = 10;
+}
+
+message PythonType {
+  string module = 1;
+  string name = 2;
+}
+
+message Settings {
+  string version = 1;
+  string engine = 2;
+  repeated string schema = 3;
+  repeated string queries = 4;
+  repeated Override overrides = 5;
+  
+  oneof codegen {
+    PythonCode python = 8;
+    KotlinCode kotlin = 9;
+    GoCode go = 10;
+    JSONCode json = 11;
+  }
+  
+  reserved 6, 7, 12;
+}
+
+message PythonCode {
+  bool emit_exact_table_names = 1;
+  bool emit_sync_querier = 2;
+  bool emit_async_querier = 3;
+  string package = 4;
+  string out = 5;
+  repeated Override overrides = 6;
+  int32 query_parameter_limit = 7;
+}
+
+message KotlinCode {
+  bool emit_exact_table_names = 1;
+  string package = 2;
+  string out = 3;
+}
+
+message GoCode {
+  bool emit_interface = 1;
+  bool emit_json_tags = 2;
+  bool emit_db_tags = 3;
+  bool emit_prepared_queries = 4;
+  bool emit_exact_table_names = 5;
+  bool emit_empty_slices = 6;
+  bool emit_exported_queries = 7;
+  bool emit_result_struct_pointers = 8;
+  bool emit_params_struct_pointers = 9;
+  bool emit_methods_with_db_argument = 10;
+  bool emit_pointers_for_null_types = 11;
+  bool emit_enum_valid_method = 12;
+  bool emit_all_enum_values = 13;
+  string package = 14;
+  string out = 15;
+  repeated Override overrides = 16;
+  string sql_package = 17;
+  string sql_driver = 18;
+  bool output_batch_file_name = 19;
+  string output_db_file_name = 20;
+  string output_models_file_name = 21;
+  string output_querier_file_name = 22;
+  string output_copyfrom_file_name = 23;
+  
+  string json_tags_case_style = 24;
+  int32 query_parameter_limit = 25;
+  
+  bool omit_unused_structs = 26;
+}
+
+message JSONCode {
+  string out = 1;
+  string indent = 2;
+  string filename = 3;
+}
+
+message Catalog {
+  string comment = 1;
+  string default_schema = 2;
+  string name = 3;
+  repeated Schema schemas = 4;
+}
+
+message Schema {
+  string comment = 1;
+  string name = 2;
+  repeated Table tables = 3;
+  repeated Enum enums = 4;
+  repeated CompositeType composite_types = 5;
+}
+
+message CompositeType {
+  string name = 1;
+  string comment = 2;
+}
+
+message Enum {
+  string name = 1;
+  repeated string vals = 2;
+  string comment = 3;
+}
+
+message Table {
+  Identifier rel = 1;
+  repeated Column columns = 2;
+  string comment = 3;
+}
+
+message Identifier {
+  string catalog = 1;
+  string schema = 2;
+  string name = 3;
+}
+
+message Column {
+  string name = 1;
+  bool not_null = 3;
+  bool is_array = 4;
+  string comment = 5;
+  int32 length = 6;
+  bool is_named_param = 7;
+  bool is_func_call = 8;
+  
+  // XXX: Figure out what PostgreSQL calls `foo.id`
+  string scope = 9;
+  Identifier table = 10;
+  string table_alias = 11;
+  Identifier type = 12;
+  bool is_sqlc_slice = 13;
+  
+  Identifier embed_table = 14;
+  
+  string original_name = 15;
+  bool unsigned = 16;
+  int32 array_dims = 17;
+}
+
+message Query {
+  string text = 1;
+  string name = 2;
+  string cmd = 3;
+  repeated Column columns = 4;
+  repeated Parameter params = 5;
+  repeated string comments = 6;
+  string filename = 7;
+  
+  oneof insert_into_table {
+    Identifier insert_into_table_rel = 8;
+  }
+}
+
+message Parameter {
+  int32 number = 1;
+  Column column = 2;
+}
+
+message CodeGenRequest {
+  Settings settings = 1;
+  Catalog catalog = 2;
+  repeated Query queries = 3;
+  string sqlc_version = 4;
+  bytes plugin_options = 5;
+  bytes global_options = 6;
+}
+
+message CodeGenResponse {
+  repeated File files = 1;
+}

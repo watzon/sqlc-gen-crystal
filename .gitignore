@@ -1,0 +1,81 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# Go workspace file
+go.work
+
+# Built plugin binary
+bin/
+sqlc-gen-crystal
+sqlc-gen-crystal-*
+
+# Dependency directories (remove the comment below to include it)
+# vendor/
+
+# Go module cache
+go.sum
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Crystal generated files
+lib/
+shard.lock
+*.dwarf
+
+# Test and example generated files
+test/integration/src/db/
+test/integration/lib/
+test/integration/shard.lock
+examples/*/src/db/
+examples/*/lib/
+examples/*/shard.lock
+
+# Logs
+*.log
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+
+# Coverage reports
+coverage/
+*.lcov
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Database files (for local testing)
+*.db
+*.sqlite
+*.sqlite3
+
+# Documentation build artifacts
+docs/_build/
+site/

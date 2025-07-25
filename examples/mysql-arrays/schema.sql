@@ -1,0 +1,13 @@
+CREATE TABLE authors (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(255) NOT NULL,
+    bio TEXT NOT NULL
+);
+
+CREATE TABLE books (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    author_id INT NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    isbn VARCHAR(13) NOT NULL,
+    FOREIGN KEY (author_id) REFERENCES authors(id)
+);
