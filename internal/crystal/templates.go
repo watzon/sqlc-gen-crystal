@@ -266,7 +266,18 @@ func isBooleanType(crystalType string) bool {
 }
 
 // Connection Manager template
-const connectionManagerTemplate = `module {{ .Package | crystalModule }}
+const databaseTemplate = `# Main entry point for generated database code
+# Always require models and queries
+require "./models"
+require "./queries"
+
+{{- if .GenerateRepositories }}
+# Require all repository files
+require "./repositories/*"
+{{- end }}
+
+{{- if .GenerateConnectionManager }}
+module {{ .Package | crystalModule }}
   class Database
     @@instance : DB::Database?
     @@queries : Queries?
@@ -302,6 +313,7 @@ const connectionManagerTemplate = `module {{ .Package | crystalModule }}
     end
   end
 end
+{{- end }}
 `
 
 // Repository template for a single table

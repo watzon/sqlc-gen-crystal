@@ -1,7 +1,7 @@
 require "spec"
 require "db"
 require "sqlite3"
-require "../src/db"
+require "../src/db/database"
 
 # Helper to create a fresh database for each test
 def with_test_db

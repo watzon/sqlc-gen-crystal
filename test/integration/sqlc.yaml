@@ -13,3 +13,5 @@ sql:
         options:
           module: "TestDb"
           emit_json_tags: false
+          generate_connection_manager: true
+          generate_repositories: true

@@ -52,12 +52,12 @@ A simple blog API built with [Athena Framework](https://athenaframework.org/) an
 4. **Build and run the server:**
    ```bash
    shards build
-   ./bin/athena_example
+   ./bin/app
    ```
 
 The database setup script will create a SQLite database with sample data including:
 - A user account (john_doe)
-- Two tags (Crystal, Web Development)  
+- Two tags (Crystal, Web Development)
 - Three blog posts (2 published, 1 draft)
 - Post-tag associations
 
@@ -68,7 +68,7 @@ The database setup script will create a SQLite database with sample data includi
 curl -X POST http://localhost:3000/users \
   -H "Content-Type: application/json" \
   -d '{
-    "username": "john_doe", 
+    "username": "john_doe",
     "email": "john@example.com",
     "password_hash": "hashed_password",
     "display_name": "John Doe",
@@ -83,7 +83,7 @@ curl -X POST http://localhost:3000/posts \
   -d '{
     "user_id": 1,
     "title": "My First Post",
-    "slug": "my-first-post", 
+    "slug": "my-first-post",
     "content": "This is the content of my first blog post...",
     "excerpt": "A brief excerpt",
     "published": true

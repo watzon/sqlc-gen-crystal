@@ -20,7 +20,7 @@ dependencies:
 
 targets:
   athena_example:
-    main: src/athena_example.cr
+    main: src/app.cr
   setup_db:
     main: setup_db.cr
 

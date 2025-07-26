@@ -67,8 +67,8 @@ func TestGenerateModels(t *testing.T) {
 		t.Fatalf("Generate() error = %v", err)
 	}
 
-	if len(resp.Files) != 2 {
-		t.Fatalf("Expected 2 files, got %d", len(resp.Files))
+	if len(resp.Files) != 3 {
+		t.Fatalf("Expected 3 files, got %d", len(resp.Files))
 	}
 
 	// Check models file
@@ -101,6 +101,21 @@ func TestGenerateModels(t *testing.T) {
 
 	if !strings.Contains(modelsContent, "getter bio : String?") {
 		t.Error("Models file should have nullable type for bio field")
+	}
+
+	// Check database file (should be third)
+	databaseFile := resp.Files[2]
+	if databaseFile.Name != "database.cr" {
+		t.Errorf("Expected database.cr, got %s", databaseFile.Name)
+	}
+
+	databaseContent := string(databaseFile.Contents)
+	if !strings.Contains(databaseContent, `require "./models"`) {
+		t.Error("Database file should require models")
+	}
+
+	if !strings.Contains(databaseContent, `require "./queries"`) {
+		t.Error("Database file should require queries")
 	}
 }
 
@@ -173,14 +188,20 @@ func TestGenerateQueries(t *testing.T) {
 		t.Fatalf("Generate() error = %v", err)
 	}
 
-	if len(resp.Files) != 1 {
-		t.Fatalf("Expected 1 file, got %d", len(resp.Files))
+	if len(resp.Files) != 2 {
+		t.Fatalf("Expected 2 files, got %d", len(resp.Files))
 	}
 
-	// Check queries file
+	// Check queries file (should be first)
 	queriesFile := resp.Files[0]
 	if queriesFile.Name != "queries.cr" {
 		t.Errorf("Expected queries.cr, got %s", queriesFile.Name)
+	}
+
+	// Check database file (should be second)
+	databaseFile := resp.Files[1]
+	if databaseFile.Name != "database.cr" {
+		t.Errorf("Expected database.cr, got %s", databaseFile.Name)
 	}
 
 	queriesContent := string(queriesFile.Contents)
@@ -291,8 +312,8 @@ func TestSkipSystemTables(t *testing.T) {
 		t.Fatalf("Generate() error = %v", err)
 	}
 
-	if len(resp.Files) != 1 {
-		t.Fatalf("Expected 1 file, got %d", len(resp.Files))
+	if len(resp.Files) != 2 {
+		t.Fatalf("Expected 2 files, got %d", len(resp.Files))
 	}
 
 	modelsContent := string(resp.Files[0].Contents)
@@ -360,8 +381,8 @@ func TestNullableParameterDefaults(t *testing.T) {
 		t.Fatalf("Generate() error = %v", err)
 	}
 
-	if len(resp.Files) != 1 {
-		t.Fatalf("Expected 1 file, got %d", len(resp.Files))
+	if len(resp.Files) != 2 {
+		t.Fatalf("Expected 2 files, got %d", len(resp.Files))
 	}
 
 	queriesContent := string(resp.Files[0].Contents)
@@ -459,8 +480,8 @@ func TestParameterOrdering(t *testing.T) {
 		t.Fatalf("Generate() error = %v", err)
 	}
 
-	if len(resp.Files) != 1 {
-		t.Fatalf("Expected 1 file, got %d", len(resp.Files))
+	if len(resp.Files) != 2 {
+		t.Fatalf("Expected 2 files, got %d", len(resp.Files))
 	}
 
 	queriesContent := string(resp.Files[0].Contents)
@@ -528,8 +549,8 @@ func TestAllRequiredParameters(t *testing.T) {
 		t.Fatalf("Generate() error = %v", err)
 	}
 
-	if len(resp.Files) != 1 {
-		t.Fatalf("Expected 1 file, got %d", len(resp.Files))
+	if len(resp.Files) != 2 {
+		t.Fatalf("Expected 2 files, got %d", len(resp.Files))
 	}
 
 	queriesContent := string(resp.Files[0].Contents)
@@ -599,8 +620,8 @@ func TestAllOptionalParameters(t *testing.T) {
 		t.Fatalf("Generate() error = %v", err)
 	}
 
-	if len(resp.Files) != 1 {
-		t.Fatalf("Expected 1 file, got %d", len(resp.Files))
+	if len(resp.Files) != 2 {
+		t.Fatalf("Expected 2 files, got %d", len(resp.Files))
 	}
 
 	queriesContent := string(resp.Files[0].Contents)
@@ -755,8 +776,8 @@ func TestBooleanQuestionGetters(t *testing.T) {
 			t.Fatalf("Generate() error = %v", err)
 		}
 
-		if len(resp.Files) != 1 {
-			t.Fatalf("Expected 1 file, got %d", len(resp.Files))
+		if len(resp.Files) != 2 {
+			t.Fatalf("Expected 2 files, got %d", len(resp.Files))
 		}
 
 		modelsContent := string(resp.Files[0].Contents)
@@ -790,8 +811,8 @@ func TestBooleanQuestionGetters(t *testing.T) {
 			t.Fatalf("Generate() error = %v", err)
 		}
 
-		if len(resp.Files) != 1 {
-			t.Fatalf("Expected 1 file, got %d", len(resp.Files))
+		if len(resp.Files) != 2 {
+			t.Fatalf("Expected 2 files, got %d", len(resp.Files))
 		}
 
 		modelsContent := string(resp.Files[0].Contents)

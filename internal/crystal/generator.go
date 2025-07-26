@@ -65,15 +65,13 @@ func (g *Generator) Generate(ctx context.Context) (*plugin.GenerateResponse, err
 		}
 	}
 
-	// Generate connection manager if enabled
-	if g.options.GenerateConnectionManager {
-		connMgrFile, err := g.generateConnectionManager()
-		if err != nil {
-			return nil, fmt.Errorf("failed to generate connection manager: %w", err)
-		}
-		if connMgrFile != nil {
-			resp.Files = append(resp.Files, connMgrFile)
-		}
+	// Always generate database.cr as the entry point file
+	databaseFile, err := g.generateDatabase()
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate database: %w", err)
+	}
+	if databaseFile != nil {
+		resp.Files = append(resp.Files, databaseFile)
 	}
 
 	// Generate repositories if enabled
@@ -576,24 +574,28 @@ type templateData struct {
 	Engine                    string
 }
 
-// generateConnectionManager generates the database.cr file with connection management
-func (g *Generator) generateConnectionManager() (*plugin.File, error) {
-	tmpl, err := template.New("connectionManager").Funcs(template.FuncMap{
+// generateDatabase generates the database.cr file as the main entry point
+func (g *Generator) generateDatabase() (*plugin.File, error) {
+	tmpl, err := template.New("database").Funcs(template.FuncMap{
 		"crystalModule": crystalModuleName,
-	}).Parse(connectionManagerTemplate)
+	}).Parse(databaseTemplate)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse connection manager template: %w", err)
+		return nil, fmt.Errorf("failed to parse database template: %w", err)
 	}
 
 	data := struct {
-		Package string
+		Package                   string
+		GenerateConnectionManager bool
+		GenerateRepositories      bool
 	}{
-		Package: g.pkg,
+		Package:                   g.pkg,
+		GenerateConnectionManager: g.options.GenerateConnectionManager,
+		GenerateRepositories:      g.options.GenerateRepositories,
 	}
 
 	var buf bytes.Buffer
 	if err := tmpl.Execute(&buf, data); err != nil {
-		return nil, fmt.Errorf("failed to execute connection manager template: %w", err)
+		return nil, fmt.Errorf("failed to execute database template: %w", err)
 	}
 
 	return &plugin.File{

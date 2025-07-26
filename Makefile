@@ -18,8 +18,7 @@ test-crystal: generate-integration
 
 # Generate examples
 generate-examples: build
-	cd examples/booktest && sqlc generate
-	cd examples/authors_books && sqlc generate
+	cd examples/athena_example && sqlc generate
 
 # Run all tests
 test: test-go test-crystal
