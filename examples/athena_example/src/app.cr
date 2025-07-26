@@ -76,7 +76,7 @@ class BlogController < ATH::Controller
       content: body.content,
       excerpt: body.excerpt,
       published: body.published?,
-      arg7: body.published? ? "1" : "0" # This is the arg7 parameter for the CASE WHEN clause
+      set_published_at: body.published? ? "1" : "0"
     )
   end
 

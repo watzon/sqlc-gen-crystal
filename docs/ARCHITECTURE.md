@@ -196,43 +196,98 @@ end
 3. **Template Caching**: Compile ECR templates once
 4. **Minimal Dependencies**: Keep the plugin lightweight
 
-### 8. Configuration Options
+### 8. Generated File Structure
+
+The plugin generates the following files:
+
+1. **database.cr** - Main entry point (always generated)
+   - Requires all other generated files
+   - Contains connection manager (if enabled)
+   - Provides centralized access to all database functionality
+
+2. **models.cr** - Model structs with DB::Serializable
+   - Generated from database schema
+   - Includes JSON/YAML serialization (if enabled)
+   - Type-safe representations of database tables
+
+3. **queries.cr** - Query methods
+   - Generated from SQL queries
+   - Type-safe method signatures
+   - Handles all database operations
+
+4. **repositories/** - Repository pattern classes (if enabled)
+   - One repository per table/model
+   - Encapsulates database operations
+   - Supports transaction handling
+
+**database.cr Structure**
+```crystal
+# Main entry point for generated database code
+# Always require models and queries
+require "./models"
+require "./queries"
+
+<% if generate_repositories %>
+# Require all repository files
+require "./repositories/*"
+<% end %>
+
+<% if generate_connection_manager %>
+module <%= package %>
+  class Database
+    # Singleton connection manager
+    @@instance : DB::Database?
+    
+    def self.connection : DB::Database
+      @@instance ||= DB.open(ENV["DATABASE_URL"])
+    end
+    
+    def self.queries : Queries
+      @@queries ||= Queries.new(connection)
+    end
+    
+    # Transaction support
+    def self.transaction(&block : Queries ->)
+      connection.transaction do |tx|
+        tx_queries = Queries.new(tx)
+        yield tx_queries
+      end
+    end
+  end
+end
+<% end %>
+```
+
+### 9. Configuration Options
 
 Plugin accepts options via JSON in the protobuf request:
 
 ```json
 {
-  "package": "db",
+  "package": "DB",
   "emit_json_tags": true,
   "emit_db_tags": true,
   "emit_result_struct_pointers": false,
-  "naming_convention": "snake_case"
+  "emit_boolean_question_getters": false,
+  "generate_connection_manager": false,
+  "generate_repositories": false
 }
 ```
 
 Options are parsed and validated:
-```crystal
-struct Options
-  include JSON::Serializable
-
-  @[JSON::Field(key: "package")]
-  property package : String = "db"
-
-  @[JSON::Field(key: "emit_json_tags")]
-  property emit_json_tags : Bool = false
-
-  @[JSON::Field(key: "emit_db_tags")]
-  property emit_db_tags : Bool = true
-
-  @[JSON::Field(key: "emit_result_struct_pointers")]
-  property emit_result_struct_pointers : Bool = false
-
-  @[JSON::Field(key: "naming_convention")]
-  property naming_convention : String = "snake_case"
-end
+```go
+type Options struct {
+    Package                     string `json:"package"`
+    EmitJSONTags                bool   `json:"emit_json_tags"`
+    EmitDBTags                  bool   `json:"emit_db_tags"`
+    EmitResultStructPointers    bool   `json:"emit_result_struct_pointers"`
+    EmitBooleanQuestionGetters  bool   `json:"emit_boolean_question_getters"`
+    GenerateConnectionManager   bool   `json:"generate_connection_manager"`
+    GenerateRepositories        bool   `json:"generate_repositories"`
+}
 ```
 
-### 9. Testing Architecture
+### 10. Testing Architecture
 
 **Unit Tests**
 - Type mapper correctness
@@ -249,7 +304,61 @@ end
 - Database driver compatibility
 - Generated code compilation
 
-### 10. Future Considerations
+### 11. Repository Pattern Implementation
+
+When `generate_repositories` is enabled, the plugin generates repository classes that provide a higher-level abstraction over the raw query methods.
+
+**Repository Features**
+- One repository per table/model
+- Encapsulates CRUD operations
+- Transaction support
+- Consistent naming conventions
+- Type-safe method signatures
+
+**Example Repository Structure**
+```crystal
+module Blog
+  class PostsRepository
+    def initialize(@queries : Queries? = nil)
+    end
+
+    private def queries
+      @queries || Database.queries
+    end
+
+    # CRUD operations
+    def create(user_id : Int64, title : String, ...) : Post?
+      queries.create_post(user_id, title, ...)
+    end
+
+    def find(id : Int64) : Post?
+      queries.get_post(id)
+    end
+
+    def all(limit : Int64, offset : Int64) : Array(Post)
+      queries.list_posts(limit, offset)
+    end
+
+    def update(id : Int64, title : String, ...) : Nil
+      queries.update_post(id, title, ...)
+    end
+
+    def delete(id : Int64) : Nil
+      queries.delete_post(id)
+    end
+
+    # Transaction support
+    def self.transaction(&block : PostsRepository ->)
+      Database.transaction do |tx_queries|
+        repo = new(tx_queries)
+        yield repo
+      end
+    end
+  end
+end
+```
+
+### 12. Future Considerations
 
 1. **Streaming Queries**: Support for result streaming
 2. **Custom Types**: User-defined type mappings

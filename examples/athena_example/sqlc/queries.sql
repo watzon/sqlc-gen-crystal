@@ -24,7 +24,7 @@ DELETE FROM users WHERE id = ?;
 -- Post queries
 -- name: CreatePost :one
 INSERT INTO posts (user_id, title, slug, content, excerpt, published, published_at)
-VALUES (?, ?, ?, ?, ?, ?, CASE WHEN ? THEN CURRENT_TIMESTAMP ELSE NULL END)
+VALUES (?, ?, ?, ?, ?, ?, CASE WHEN sqlc.arg(set_published_at) THEN CURRENT_TIMESTAMP ELSE NULL END)
 RETURNING *;
 
 -- name: GetPost :one
