@@ -318,40 +318,46 @@ When `generate_repositories` is enabled, the plugin generates repository classes
 **Example Repository Structure**
 ```crystal
 module Blog
-  class PostsRepository
-    def initialize(@queries : Queries? = nil)
-    end
-
-    private def queries
-      @queries || Database.queries
-    end
+  module PostsRepository
+    extend self
 
     # CRUD operations
     def create(user_id : Int64, title : String, ...) : Post?
-      queries.create_post(user_id, title, ...)
+      Database.queries.create_post(user_id, title, ...)
     end
 
     def find(id : Int64) : Post?
-      queries.get_post(id)
+      Database.queries.get_post(id)
     end
 
     def all(limit : Int64, offset : Int64) : Array(Post)
-      queries.list_posts(limit, offset)
+      Database.queries.list_posts(limit, offset)
     end
 
     def update(id : Int64, title : String, ...) : Nil
-      queries.update_post(id, title, ...)
+      Database.queries.update_post(id, title, ...)
     end
 
     def delete(id : Int64) : Nil
-      queries.delete_post(id)
+      Database.queries.delete_post(id)
+    end
+
+    # Transaction wrapper for scoped operations
+    class Transaction
+      def initialize(@queries : Queries)
+      end
+
+      def create(user_id : Int64, title : String, ...) : Post?
+        @queries.create_post(user_id, title, ...)
+      end
+
+      # ... other methods ...
     end
 
     # Transaction support
-    def self.transaction(&block : PostsRepository ->)
+    def transaction(&block : Transaction ->)
       Database.transaction do |tx_queries|
-        repo = new(tx_queries)
-        yield repo
+        yield Transaction.new(tx_queries)
       end
     end
   end

@@ -29,8 +29,7 @@ class BlogController < ATH::Controller
     raise ATH::Exception::BadRequest.new "Request body is empty." unless body_str
 
     body = UserCreateRequest.from_json(body_str)
-    users_repo = Blog::UsersRepository.new
-    users_repo.create(
+    Blog::UsersRepository.create(
       username: body.username,
       email: body.email,
       password_hash: body.password_hash,
@@ -42,23 +41,20 @@ class BlogController < ATH::Controller
   @[ARTA::Get("/users/{id}")]
   def get_user(id : Int64) : Blog::User?
     setup_database
-    users_repo = Blog::UsersRepository.new
-    users_repo.find(id)
+    Blog::UsersRepository.find(id)
   end
 
   # Posts endpoints
   @[ARTA::Get("/posts")]
   def list_posts(limit : Int64 = 10, offset : Int64 = 0) : Array(Blog::GetPostRow)
     setup_database
-    posts_repo = Blog::PostsRepository.new
-    posts_repo.all(limit: limit, offset: offset)
+    Blog::PostsRepository.all(limit: limit, offset: offset)
   end
 
   @[ARTA::Get("/posts/{slug}")]
   def get_post_by_slug(slug : String) : Blog::GetPostRow?
     setup_database
-    posts_repo = Blog::PostsRepository.new
-    posts_repo.find_by_slug(slug)
+    Blog::PostsRepository.find_by_slug(slug)
   end
 
   @[ARTA::Post("/posts")]
@@ -68,8 +64,7 @@ class BlogController < ATH::Controller
     raise ATH::Exception::BadRequest.new "Request body is empty." unless body_str
 
     body = PostCreateRequest.from_json(body_str)
-    posts_repo = Blog::PostsRepository.new
-    posts_repo.create(
+    Blog::PostsRepository.create(
       user_id: body.user_id,
       title: body.title,
       slug: body.slug,
@@ -83,16 +78,14 @@ class BlogController < ATH::Controller
   @[ARTA::Post("/posts/{id}/publish")]
   def publish_post(id : Int64, user_id : Int64) : Nil
     setup_database
-    posts_repo = Blog::PostsRepository.new
-    posts_repo.publish_post(id: id, user_id: user_id)
+    Blog::PostsRepository.publish_post(id: id, user_id: user_id)
     nil
   end
 
   @[ARTA::Delete("/posts/{id}")]
   def delete_post(id : Int64, user_id : Int64) : Nil
     setup_database
-    posts_repo = Blog::PostsRepository.new
-    posts_repo.delete(id: id, user_id: user_id)
+    Blog::PostsRepository.delete(id: id, user_id: user_id)
     nil
   end
 
@@ -100,8 +93,7 @@ class BlogController < ATH::Controller
   @[ARTA::Get("/tags")]
   def list_tags : Array(Blog::Tag)
     setup_database
-    tags_repo = Blog::TagsRepository.new
-    tags_repo.all
+    Blog::TagsRepository.all
   end
 
   @[ARTA::Post("/tags")]
@@ -111,8 +103,7 @@ class BlogController < ATH::Controller
     raise ATH::Exception::BadRequest.new "Request body is empty." unless body_str
 
     body = TagCreateRequest.from_json(body_str)
-    tags_repo = Blog::TagsRepository.new
-    tags_repo.create(
+    Blog::TagsRepository.create(
       name: body.name,
       slug: body.slug,
       description: body.description
@@ -122,13 +113,10 @@ class BlogController < ATH::Controller
   @[ARTA::Get("/tags/{slug}/posts")]
   def get_posts_by_tag(slug : String, limit : Int64 = 10, offset : Int64 = 0) : Array(Blog::GetPostRow)
     setup_database
-    tags_repo = Blog::TagsRepository.new
-    posts_repo = Blog::PostsRepository.new
-
-    tag = tags_repo.find_by_slug(slug)
+    tag = Blog::TagsRepository.find_by_slug(slug)
     return [] of Blog::GetPostRow unless tag
 
-    posts_repo.finds_by_tag(tag_id: tag.id, limit: limit, offset: offset)
+    Blog::PostsRepository.finds_by_tag(tag_id: tag.id, limit: limit, offset: offset)
   end
 end
 

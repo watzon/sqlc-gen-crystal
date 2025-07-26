@@ -318,32 +318,35 @@ end
 
 // Repository template for a single table
 const repositoryTemplate = `module {{ .Package | crystalModule }}
-  class {{ .TableName }}Repository
-    def initialize(@queries : Queries? = nil)
-    end
-
-    private def queries
-      @queries || Database.queries
-    end
+  module {{ .TableName }}Repository
+    extend self
     {{- range .Methods }}
     {{- if .IsTableSpecific }}
 
     def {{ .MethodName }}({{ .Params | paramList }}){{ if .ReturnType }} : {{ .ReturnType }}{{ end }}
-      queries.{{ .Name }}({{ .Params | paramNames }})
+      Database.queries.{{ .Name }}({{ .Params | paramNames }})
     end
     {{- end }}
     {{- end }}
 
-    # Create a repository instance that uses the given transaction context
-    def self.with_transaction(tx_queries : Queries)
-      new(tx_queries)
+    # Transaction wrapper class
+    class Transaction
+      def initialize(@queries : Queries)
+      end
+      {{- range .Methods }}
+      {{- if .IsTableSpecific }}
+
+      def {{ .MethodName }}({{ .Params | paramList }}){{ if .ReturnType }} : {{ .ReturnType }}{{ end }}
+        @queries.{{ .Name }}({{ .Params | paramNames }})
+      end
+      {{- end }}
+      {{- end }}
     end
 
-    # Execute a block within a transaction, automatically creating repository instances
-    def self.transaction(&block : {{ .TableName }}Repository ->)
+    # Execute a block within a transaction
+    def transaction(&block : Transaction ->)
       Database.transaction do |tx_queries|
-        repo = new(tx_queries)
-        yield repo
+        yield Transaction.new(tx_queries)
       end
     end
   end

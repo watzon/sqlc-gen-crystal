@@ -58,6 +58,9 @@ sql:
         options:
           module: "MyApp" # Note: 'module' instead of 'package'
           emit_json_tags: false
+          emit_boolean_question_getters: true # Use `getter?` for boolean fields
+          generate_connection_manager: true
+          generate_repositories: true
 ```
 
 ## Getting Started
@@ -130,83 +133,57 @@ end
 
 ### Real-world Usage
 
-In practice, you'll want to manage your database connection and queries object more carefully:
+With the `generate_connection_manager` and `generate_repositories` options enabled (as shown in the configuration above), you get a clean, ready-to-use API:
 
 ```crystal
-# app/services/database.cr
-module App
-  class Database
-    @@instance : DB::Database?
-    @@queries : MyApp::Queries?
+require "./src/db/database"
 
-    def self.connection
-      @@instance ||= DB.open(ENV["DATABASE_URL"])
-    end
+# Simple repository usage
+author = MyApp::AuthorsRepository.create(name: "Jane Doe", bio: "A prolific writer")
+all_authors = MyApp::AuthorsRepository.all
 
-    def self.queries
-      @@queries ||= MyApp::Queries.new(connection)
-    end
-
-    def self.close
-      @@instance.try(&.close)
-      @@instance = nil
-      @@queries = nil
-    end
-  end
+# With transactions
+MyApp::AuthorsRepository.transaction do |repo|
+  author1 = repo.create(name: "Author 1", bio: "First author")
+  author2 = repo.create(name: "Author 2", bio: "Second author")
+  # Both inserts succeed or both fail
 end
 
-# app/repositories/author_repository.cr
-module App
-  class AuthorRepository
-    def initialize(@queries : MyApp::Queries = Database.queries)
-    end
-
-    def find(id : Int64)
-      @queries.get_author(id)
-    end
-
-    def all
-      @queries.list_authors
-    end
-
-    def create(name : String, bio : String?)
-      @queries.create_author(name, bio)
-    end
-
-    def delete(id : Int64)
-      @queries.delete_author(id)
-    end
-  end
-end
-
-# Usage in your application
-repo = App::AuthorRepository.new
-author = repo.create("Jane Doe", "A prolific writer")
-all_authors = repo.all
+# Direct database access when needed
+MyApp::Database.connection.exec("VACUUM ANALYZE authors")
 ```
 
 ## Options
 
-| Option                      | Default    | Description                                              |
-| --------------------------- | ---------- | -------------------------------------------------------- |
-| module                      | (required) | Crystal module name (supports nested: "MyApp::Database") |
-| emit_json_tags              | false      | Add JSON::Serializable annotations to structs            |
-| emit_yaml_tags              | false      | Add YAML::Serializable annotations to structs            |
-| emit_db_tags                | true       | Add DB::Serializable annotations to structs              |
-| emit_msgpack_tags           | false      | Add MessagePack::Serializable annotations to structs     |
-| generate_connection_manager | false      | Generate a Database class for connection management      |
-| generate_repositories       | false      | Generate repository classes for each table               |
+| Option                         | Default    | Description                                              |
+| ------------------------------ | ---------- | -------------------------------------------------------- |
+| module                         | (required) | Crystal module name (supports nested: "MyApp::Database") |
+| emit_json_tags                 | false      | Add JSON::Serializable annotations to structs            |
+| emit_yaml_tags                 | false      | Add YAML::Serializable annotations to structs            |
+| emit_db_tags                   | true       | Add DB::Serializable annotations to structs              |
+| emit_msgpack_tags              | false      | Add MessagePack::Serializable annotations to structs     |
+| emit_boolean_question_getters  | false      | Generate `getter?` methods for boolean fields            |
+| generate_connection_manager    | false      | Generate a Database class for connection management      |
+| generate_repositories          | false      | Generate repository classes for each table               |
 
 ### Generated Files
 
-With `generate_connection_manager: true`:
+The plugin always generates:
 
-- `database.cr` - Singleton database connection manager
+- `database.cr` - Entry point that requires all other generated files
+- `models.cr` - Crystal structs for database tables
+- `queries.cr` - Type-safe query methods
 
-With `generate_repositories: true`:
+With `generate_connection_manager: true`, the `database.cr` file also includes:
 
-- `repositories/authors_repository.cr` - Repository for authors table
-- `repositories/[table]_repository.cr` - Repository for each table
+- Singleton database connection manager
+- Transaction support methods
+
+With `generate_repositories: true`, additional files are generated:
+
+- `repositories/[table]_repository.cr` - Repository class for each table
+- Repository methods that wrap the underlying queries
+- Transaction support at the repository level
 
 ## Query Annotations
 
