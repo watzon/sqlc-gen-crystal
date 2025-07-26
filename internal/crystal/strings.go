@@ -3,6 +3,9 @@ package crystal
 import (
 	"regexp"
 	"strings"
+
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 var (
@@ -59,7 +62,7 @@ func singularize(word string) string {
 	}
 
 	lower := strings.ToLower(word)
-	
+
 	// Handle irregular plurals
 	irregulars := map[string]string{
 		"children": "child",
@@ -72,49 +75,51 @@ func singularize(word string) string {
 		"mice":     "mouse",
 		"dice":     "die",
 	}
-	
+
 	if singular, exists := irregulars[lower]; exists {
 		// Preserve original casing
 		if strings.ToUpper(word) == word {
 			return strings.ToUpper(singular)
-		} else if strings.Title(word) == word {
-			return strings.Title(singular)
+		} else if word[0] >= 'A' && word[0] <= 'Z' {
+			// If the first letter is uppercase, capitalize the singular
+			caser := cases.Title(language.English)
+			return caser.String(singular)
 		}
 		return singular
 	}
-	
+
 	// Handle common suffixes
 	if strings.HasSuffix(lower, "ies") && len(word) > 3 {
 		// companies -> company, cities -> city
 		return word[:len(word)-3] + "y"
 	}
-	
+
 	if strings.HasSuffix(lower, "ves") && len(word) > 3 {
 		// knives -> knife, lives -> life
 		return word[:len(word)-3] + "fe"
 	}
-	
+
 	if strings.HasSuffix(lower, "ses") && len(word) > 3 {
-		// classes -> class, processes -> process  
+		// classes -> class, processes -> process
 		return word[:len(word)-2]
 	}
-	
+
 	if strings.HasSuffix(lower, "es") && len(word) > 2 {
 		// Check if it's a simple -es plural (boxes -> box)
 		beforeEs := word[:len(word)-2]
 		lastChar := strings.ToLower(string(beforeEs[len(beforeEs)-1]))
-		if lastChar == "x" || lastChar == "s" || lastChar == "z" || 
-		   strings.HasSuffix(strings.ToLower(beforeEs), "ch") || 
-		   strings.HasSuffix(strings.ToLower(beforeEs), "sh") {
+		if lastChar == "x" || lastChar == "s" || lastChar == "z" ||
+			strings.HasSuffix(strings.ToLower(beforeEs), "ch") ||
+			strings.HasSuffix(strings.ToLower(beforeEs), "sh") {
 			return beforeEs
 		}
 	}
-	
+
 	if strings.HasSuffix(lower, "s") && len(word) > 1 {
 		// Simple plural: books -> book, authors -> author
 		return word[:len(word)-1]
 	}
-	
+
 	// No change needed
 	return word
 }
@@ -125,7 +130,7 @@ func crystalModuleName(name string) string {
 	if name == "" {
 		return "Db"
 	}
-	
+
 	// Handle nested modules (separated by :: or .)
 	var parts []string
 	if strings.Contains(name, "::") {
@@ -135,11 +140,11 @@ func crystalModuleName(name string) string {
 	} else {
 		parts = []string{name}
 	}
-	
+
 	// Convert each part to PascalCase
 	for i, part := range parts {
 		parts[i] = toPascalCase(part)
 	}
-	
+
 	return strings.Join(parts, "::")
 }
