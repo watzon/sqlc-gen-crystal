@@ -32,8 +32,25 @@ jobs:
       - name: Build plugin
         run: go build -o bin/sqlc-gen-crystal
 
+      - name: Upload plugin binary
+        uses: actions/upload-artifact@v3
+        with:
+          name: sqlc-gen-crystal
+          path: bin/sqlc-gen-crystal
+
       - name: Run Go tests
         run: make test-go
+
+      - name: Download plugin binary
+        uses: actions/download-artifact@v3
+        with:
+          name: sqlc-gen-crystal
+          path: bin
+
+      - name: Add plugin to PATH
+        run: |
+          chmod +x bin/sqlc-gen-crystal
+          echo "${{ github.workspace }}/bin" >> $GITHUB_PATH
 
       - name: Generate examples
         run: make generate-examples
