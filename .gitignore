@@ -22,9 +22,6 @@ sqlc-gen-crystal-*
 # Dependency directories (remove the comment below to include it)
 # vendor/
 
-# Go module cache
-go.sum
-
 # IDE and editor files
 .vscode/
 .idea/
