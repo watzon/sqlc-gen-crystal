@@ -2,7 +2,8 @@ version: "2"
 plugins:
   - name: crystal
     process:
-      cmd: /Users/watzon/Projects/personal/sqlc-gen-crystal/bin/sqlc-gen-crystal
+      # Make sure this is in your PATH
+      cmd: sqlc-gen-crystal
 sql:
   - schema: "sqlc/schema.sql"
     queries: "sqlc/queries.sql"
