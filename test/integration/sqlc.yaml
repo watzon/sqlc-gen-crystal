@@ -11,5 +11,5 @@ sql:
       - plugin: crystal
         out: src/db
         options:
-          package: "test_db"
+          module: "TestDb"
           emit_json_tags: false

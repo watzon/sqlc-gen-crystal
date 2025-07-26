@@ -2,37 +2,34 @@ require "athena"
 require "db"
 require "sqlite3"
 require "./db/*"
+require "./db/repositories/*"
 
 # Simple blog API built with Athena Framework and sqlc-gen-crystal
 class BlogController < ATH::Controller
-  @@db : DB::Database?
-  @@queries : Blog::Queries?
-
-  # Database connection
-  private def db
-    @@db ||= DB.open("sqlite3:./blog.db")
-  end
-
-  private def queries
-    @@queries ||= Blog::Queries.new(db)
+  # Initialize database connection using the connection manager
+  private def setup_database
+    ENV["DATABASE_URL"] = "sqlite3:./blog.db"
   end
 
   # Initialize database
   @[ARTA::Get("/init")]
   def init_db : String
+    setup_database
     schema = File.read("schema.sql")
-    db.exec(schema)
+    Blog::Database.connection.exec(schema)
     "Database initialized!"
   end
 
   # Users endpoints
   @[ARTA::Post("/users")]
   def create_user(request : ATH::Request) : Blog::User?
+    setup_database
     body_str = request.body.try &.gets_to_end
     raise ATH::Exception::BadRequest.new "Request body is empty." unless body_str
 
     body = UserCreateRequest.from_json(body_str)
-    queries.create_user(
+    users_repo = Blog::UsersRepository.new
+    users_repo.create(
       username: body.username,
       email: body.email,
       password_hash: body.password_hash,
@@ -43,62 +40,78 @@ class BlogController < ATH::Controller
 
   @[ARTA::Get("/users/{id}")]
   def get_user(id : Int64) : Blog::User?
-    queries.get_user(id)
+    setup_database
+    users_repo = Blog::UsersRepository.new
+    users_repo.find(id)
   end
 
   # Posts endpoints
   @[ARTA::Get("/posts")]
   def list_posts(limit : Int64 = 10, offset : Int64 = 0) : Array(Blog::GetPostRow)
-    queries.list_posts(limit, offset)
+    setup_database
+    posts_repo = Blog::PostsRepository.new
+    posts_repo.all(limit, offset)
   end
 
   @[ARTA::Get("/posts/{slug}")]
   def get_post_by_slug(slug : String) : Blog::GetPostRow?
-    queries.get_post_by_slug(slug)
+    setup_database
+    posts_repo = Blog::PostsRepository.new
+    posts_repo.find_by_slug(slug)
   end
 
   @[ARTA::Post("/posts")]
   def create_post(request : ATH::Request) : Blog::Post?
+    setup_database
     body_str = request.body.try &.gets_to_end
     raise ATH::Exception::BadRequest.new "Request body is empty." unless body_str
 
     body = PostCreateRequest.from_json(body_str)
-    queries.create_post(
+    posts_repo = Blog::PostsRepository.new
+    posts_repo.create(
       body.user_id,
       body.title,
       body.slug,
       body.content,
       body.excerpt,
-      body.published,
-      body.published ? "1" : "0" # This is the arg7 parameter for the CASE WHEN clause
+      body.published?,
+      body.published? ? "1" : "0" # This is the arg7 parameter for the CASE WHEN clause
     )
   end
 
   @[ARTA::Post("/posts/{id}/publish")]
   def publish_post(id : Int64, user_id : Int64) : Nil
-    queries.publish_post(id, user_id)
+    setup_database
+    posts_repo = Blog::PostsRepository.new
+    posts_repo.publish_post(id, user_id)
     nil
   end
 
   @[ARTA::Delete("/posts/{id}")]
   def delete_post(id : Int64, user_id : Int64) : Nil
-    queries.delete_post(id, user_id)
+    setup_database
+    posts_repo = Blog::PostsRepository.new
+    posts_repo.delete(id, user_id)
     nil
   end
 
   # Tags endpoints
   @[ARTA::Get("/tags")]
   def list_tags : Array(Blog::Tag)
-    queries.list_tags
+    setup_database
+    tags_repo = Blog::TagsRepository.new
+    tags_repo.all
   end
 
   @[ARTA::Post("/tags")]
   def create_tag(request : ATH::Request) : Blog::Tag?
+    setup_database
     body_str = request.body.try &.gets_to_end
     raise ATH::Exception::BadRequest.new "Request body is empty." unless body_str
 
     body = TagCreateRequest.from_json(body_str)
-    queries.create_tag(
+    tags_repo = Blog::TagsRepository.new
+    tags_repo.create(
       name: body.name,
       slug: body.slug,
       description: body.description
@@ -107,10 +120,14 @@ class BlogController < ATH::Controller
 
   @[ARTA::Get("/tags/{slug}/posts")]
   def get_posts_by_tag(slug : String, limit : Int64 = 10, offset : Int64 = 0) : Array(Blog::GetPostRow)
-    tag = queries.get_tag_by_slug(slug)
+    setup_database
+    tags_repo = Blog::TagsRepository.new
+    posts_repo = Blog::PostsRepository.new
+    
+    tag = tags_repo.find_by_slug(slug)
     return [] of Blog::GetPostRow unless tag
 
-    queries.get_posts_by_tag(tag.id, limit, offset)
+    posts_repo.finds_by_tag(tag.id, limit, offset)
   end
 end
 
@@ -133,7 +150,7 @@ struct PostCreateRequest
   getter slug : String
   getter content : String
   getter excerpt : String?
-  getter published : Bool = false
+  getter? published : Bool = false
 end
 
 struct TagCreateRequest

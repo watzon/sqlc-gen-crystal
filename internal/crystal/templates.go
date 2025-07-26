@@ -9,6 +9,7 @@ import (
 
 var modelsTemplate = template.Must(template.New("models").Funcs(template.FuncMap{
 	"crystalModule": crystalModuleName,
+	"isBooleanType": isBooleanType,
 }).Parse(modelsTemplateStr))
 var queriesTemplate = template.Must(template.New("queries").Funcs(template.FuncMap{
 	"paramNames":          paramNames,
@@ -40,7 +41,11 @@ const modelsTemplateStr = `module {{ .Package | crystalModule }}
     {{- if and $.EmitDBTags (ne .DBName .Name) }}
     @[DB::Field(key: {{ .DBName | printf "%q" }})]
     {{- end }}
+    {{- if and $.EmitBooleanQuestionGetters (isBooleanType .Type) }}
+    getter? {{ .Name }} : {{ .Type }}
+    {{- else }}
     getter {{ .Name }} : {{ .Type }}
+    {{- end }}
     {{- end }}
   end
 {{ end -}}
@@ -253,6 +258,11 @@ func expandSliceParams(params []crystalParam, sliceParams []sqlcSliceParam) stri
 	}
 
 	return strings.Join(expansions, "\n")
+}
+
+// isBooleanType checks if a Crystal type is Bool or Bool?
+func isBooleanType(crystalType string) bool {
+	return crystalType == "Bool" || crystalType == "Bool?"
 }
 
 // Connection Manager template

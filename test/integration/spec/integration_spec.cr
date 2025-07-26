@@ -32,7 +32,7 @@ describe "SqlcGenCrystal Integration Tests" do
         queries = TestDb::Queries.new(db)
         
         # Create a user
-        user = queries.create_user("test@example.com", "Test User", 25, true)
+        user = queries.create_user("test@example.com", "Test User", true, 25)
         user.should_not be_nil
         
         if user
@@ -59,7 +59,7 @@ describe "SqlcGenCrystal Integration Tests" do
         queries = TestDb::Queries.new(db)
         
         # Create a user
-        user = queries.create_user("unique@example.com", "Unique User", 30, true)
+        user = queries.create_user("unique@example.com", "Unique User", true, 30)
         
         # Find by email
         found = queries.get_user_by_email("unique@example.com")
@@ -81,9 +81,9 @@ describe "SqlcGenCrystal Integration Tests" do
         queries = TestDb::Queries.new(db)
         
         # Create multiple users
-        queries.create_user("user1@example.com", "User One", 20, true)
-        queries.create_user("user2@example.com", "User Two", 25, false)
-        queries.create_user("user3@example.com", "User Three", 30, true)
+        queries.create_user("user1@example.com", "User One", true, 20)
+        queries.create_user("user2@example.com", "User Two", false, 25)
+        queries.create_user("user3@example.com", "User Three", true, 30)
         
         # List all users
         all_users = queries.list_users
@@ -101,11 +101,11 @@ describe "SqlcGenCrystal Integration Tests" do
         queries = TestDb::Queries.new(db)
         
         # Create a user
-        user = queries.create_user("update@example.com", "Original Name", 25, true)
+        user = queries.create_user("update@example.com", "Original Name", true, 25)
         
         if user
           # Update the user
-          queries.update_user("Updated Name", 26, false, user.id)
+          queries.update_user("Updated Name", false, user.id, 26)
           
           # Verify update
           updated = queries.get_user(user.id)
@@ -124,7 +124,7 @@ describe "SqlcGenCrystal Integration Tests" do
         queries = TestDb::Queries.new(db)
         
         # Create a user
-        user = queries.create_user("delete@example.com", "To Delete", 25, true)
+        user = queries.create_user("delete@example.com", "To Delete", true, 25)
         
         if user
           # Delete the user
@@ -146,8 +146,8 @@ describe "SqlcGenCrystal Integration Tests" do
         count.should eq(0)
         
         # Add users
-        queries.create_user("count1@example.com", "User 1", 20, true)
-        queries.create_user("count2@example.com", "User 2", 25, true)
+        queries.create_user("count1@example.com", "User 1", true, 20)
+        queries.create_user("count2@example.com", "User 2", true, 25)
         
         # Count again
         count = queries.count_users
@@ -160,9 +160,9 @@ describe "SqlcGenCrystal Integration Tests" do
         queries = TestDb::Queries.new(db)
         
         # Create users with different ages and active status
-        queries.create_user("stats1@example.com", "User 1", 20, true)
-        queries.create_user("stats2@example.com", "User 2", 30, true)
-        queries.create_user("stats3@example.com", "User 3", 40, false)
+        queries.create_user("stats1@example.com", "User 1", true, 20)
+        queries.create_user("stats2@example.com", "User 2", true, 30)
+        queries.create_user("stats3@example.com", "User 3", false, 40)
         
         # Get stats
         stats = queries.get_user_stats
@@ -181,11 +181,11 @@ describe "SqlcGenCrystal Integration Tests" do
         queries = TestDb::Queries.new(db)
         
         # Create a user first
-        user = queries.create_user("author@example.com", "Author", 30, true)
+        user = queries.create_user("author@example.com", "Author", true, 30)
         
         if user
           # Create a post
-          post = queries.create_post(user.id, "Test Post", "This is test content", false, 4.5)
+          post = queries.create_post(user.id, "Test Post", false, "This is test content", 4.5)
           post.should_not be_nil
           
           if post
@@ -212,16 +212,16 @@ describe "SqlcGenCrystal Integration Tests" do
         queries = TestDb::Queries.new(db)
         
         # Create users
-        user1 = queries.create_user("user1@example.com", "User 1", 25, true)
-        user2 = queries.create_user("user2@example.com", "User 2", 30, true)
+        user1 = queries.create_user("user1@example.com", "User 1", true, 25)
+        user2 = queries.create_user("user2@example.com", "User 2", true, 30)
         
         if user1 && user2
           # Create posts for user1
-          queries.create_post(user1.id, "Post 1", "Content 1", true, 4.0)
-          queries.create_post(user1.id, "Post 2", "Content 2", false, 3.5)
+          queries.create_post(user1.id, "Post 1", true, "Content 1", 4.0)
+          queries.create_post(user1.id, "Post 2", false, "Content 2", 3.5)
           
           # Create post for user2
-          queries.create_post(user2.id, "Post 3", "Content 3", true, 4.5)
+          queries.create_post(user2.id, "Post 3", true, "Content 3", 4.5)
           
           # List posts for user1
           user1_posts = queries.list_posts_by_user(user1.id)
@@ -239,9 +239,9 @@ describe "SqlcGenCrystal Integration Tests" do
         queries = TestDb::Queries.new(db)
         
         # Create a user and post
-        user = queries.create_user("viewer@example.com", "Viewer", 25, true)
+        user = queries.create_user("viewer@example.com", "Viewer", true, 25)
         if user
-          post = queries.create_post(user.id, "Popular Post", "Content", true, 5.0)
+          post = queries.create_post(user.id, "Popular Post", true, "Content", 5.0)
           
           if post
             # Initial view count should be 0
@@ -266,13 +266,13 @@ describe "SqlcGenCrystal Integration Tests" do
         queries = TestDb::Queries.new(db)
         
         # Create a user
-        user = queries.create_user("searcher@example.com", "Searcher", 25, true)
+        user = queries.create_user("searcher@example.com", "Searcher", true, 25)
         
         if user
           # Create posts with different content
-          queries.create_post(user.id, "Crystal Programming", "Learn Crystal language", true, 5.0)
-          queries.create_post(user.id, "Ruby Tutorial", "Ruby programming guide", true, 4.0)
-          queries.create_post(user.id, "Private Post", "This contains Crystal info", false, 3.0)
+          queries.create_post(user.id, "Crystal Programming", true, "Learn Crystal language", 5.0)
+          queries.create_post(user.id, "Ruby Tutorial", true, "Ruby programming guide", 4.0)
+          queries.create_post(user.id, "Private Post", false, "This contains Crystal info", 3.0)
           
           # Search for "Crystal" (should find only published posts)
           results = queries.search_posts("%Crystal%", "%Crystal%")
@@ -293,9 +293,9 @@ describe "SqlcGenCrystal Integration Tests" do
         queries = TestDb::Queries.new(db)
         
         # Create a user and post
-        user = queries.create_user("tagger@example.com", "Tagger", 25, true)
+        user = queries.create_user("tagger@example.com", "Tagger", true, 25)
         if user
-          post = queries.create_post(user.id, "Tagged Post", "Content", true, 4.0)
+          post = queries.create_post(user.id, "Tagged Post", true, "Content", 4.0)
           
           if post
             # Create tags
@@ -325,7 +325,7 @@ describe "SqlcGenCrystal Integration Tests" do
         queries = TestDb::Queries.new(db)
         
         # Create user with null age
-        user = queries.create_user("nullable@example.com", "Nullable User", nil, true)
+        user = queries.create_user("nullable@example.com", "Nullable User", true, nil)
         user.should_not be_nil
         
         if user
@@ -345,8 +345,8 @@ describe "SqlcGenCrystal Integration Tests" do
         queries = TestDb::Queries.new(db)
         
         # Create active and inactive users
-        active_user = queries.create_user("active@example.com", "Active", 25, true)
-        inactive_user = queries.create_user("inactive@example.com", "Inactive", 30, false)
+        active_user = queries.create_user("active@example.com", "Active", true, 25)
+        inactive_user = queries.create_user("inactive@example.com", "Inactive", false, 30)
         
         if active_user && inactive_user
           active_user.active.should be_true
@@ -360,7 +360,7 @@ describe "SqlcGenCrystal Integration Tests" do
         queries = TestDb::Queries.new(db)
         
         # Create a user
-        user = queries.create_user("time@example.com", "Time User", 25, true)
+        user = queries.create_user("time@example.com", "Time User", true, 25)
         
         if user
           # created_at should be set
@@ -378,9 +378,9 @@ describe "SqlcGenCrystal Integration Tests" do
         queries = TestDb::Queries.new(db)
         
         # Create user and post with rating
-        user = queries.create_user("rater@example.com", "Rater", 25, true)
+        user = queries.create_user("rater@example.com", "Rater", true, 25)
         if user
-          post = queries.create_post(user.id, "Rated Post", "Content", true, 4.75)
+          post = queries.create_post(user.id, "Rated Post", true, "Content", 4.75)
           
           if post
             post.rating.should eq(4.75)

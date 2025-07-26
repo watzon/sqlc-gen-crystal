@@ -18,6 +18,7 @@ type Options struct {
 	EmitResultStructPointers  bool   `json:"emit_result_struct_pointers"`
 	GenerateConnectionManager bool   `json:"generate_connection_manager"`
 	GenerateRepositories      bool   `json:"generate_repositories"`
+	EmitBooleanQuestionGetters bool   `json:"emit_boolean_question_getters"`
 }
 
 // Run is the main entry point for the plugin
@@ -51,6 +52,7 @@ func generate(ctx context.Context, req *plugin.GenerateRequest) (*plugin.Generat
 		EmitResultStructPointers:  options.EmitResultStructPointers,
 		GenerateConnectionManager: options.GenerateConnectionManager,
 		GenerateRepositories:      options.GenerateRepositories,
+		EmitBooleanQuestionGetters: options.EmitBooleanQuestionGetters,
 	})
 	
 	// Generate the code

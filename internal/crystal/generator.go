@@ -18,21 +18,24 @@ type GeneratorOptions struct {
 	EmitResultStructPointers  bool
 	GenerateConnectionManager bool
 	GenerateRepositories      bool
+	EmitBooleanQuestionGetters bool
 }
 
 // Generator generates Crystal code from SQL queries
 type Generator struct {
-	req     *plugin.GenerateRequest
-	pkg     string
-	options GeneratorOptions
+	req                *plugin.GenerateRequest
+	pkg                string
+	options            GeneratorOptions
+	signatureToStruct  map[string]string // Maps field signatures to struct names
 }
 
 // NewGenerator creates a new Crystal code generator
 func NewGenerator(req *plugin.GenerateRequest, pkg string, options GeneratorOptions) *Generator {
 	return &Generator{
-		req:     req,
-		pkg:     pkg,
-		options: options,
+		req:               req,
+		pkg:               pkg,
+		options:           options,
+		signatureToStruct: make(map[string]string),
 	}
 }
 
@@ -135,6 +138,7 @@ func (g *Generator) generateModels() (*plugin.File, error) {
 			if len(cs.Fields) > 0 {
 				structs[structName] = cs
 				fieldSignatures[fieldSig.String()] = structName
+				g.signatureToStruct[fieldSig.String()] = structName
 			}
 		}
 	}
@@ -289,6 +293,7 @@ func (g *Generator) generateModels() (*plugin.File, error) {
 
 		structs[structName] = cs
 		fieldSignatures[signature] = structName
+		g.signatureToStruct[signature] = structName
 	}
 
 	if len(structs) == 0 {
@@ -307,10 +312,11 @@ func (g *Generator) generateModels() (*plugin.File, error) {
 	// Generate the models file
 	var buf bytes.Buffer
 	err := modelsTemplate.Execute(&buf, templateData{
-		Package:      g.pkg,
-		Structs:      structList,
-		EmitJSONTags: g.options.EmitJSONTags,
-		EmitDBTags:   g.options.EmitDBTags,
+		Package:                   g.pkg,
+		Structs:                   structList,
+		EmitJSONTags:              g.options.EmitJSONTags,
+		EmitDBTags:                g.options.EmitDBTags,
+		EmitBooleanQuestionGetters: g.options.EmitBooleanQuestionGetters,
 	})
 	if err != nil {
 		return nil, err
@@ -340,40 +346,12 @@ func (g *Generator) getStructNameForQuery(query *plugin.Query) string {
 	}
 	signature := fieldSig.String()
 
-	// Try to find existing struct with matching signature from tables first
-	if g.req.Catalog != nil {
-		for _, schema := range g.req.Catalog.Schemas {
-		if schema.Name == "information_schema" || schema.Name == "pg_catalog" {
-			continue
-		}
-
-		for _, table := range schema.Tables {
-			if strings.HasPrefix(table.Rel.Name, "pg_") ||
-				strings.HasPrefix(table.Rel.Name, "sql_") ||
-				table.Rel.Schema == "information_schema" ||
-				table.Rel.Schema == "pg_catalog" {
-				continue
-			}
-
-			// Build table signature
-			var tableSig strings.Builder
-			for _, col := range table.Columns {
-				field := crystalField{
-					Name:   toSnakeCase(col.Name),
-					DBName: col.Name,
-					Type:   g.crystalType(col),
-				}
-				tableSig.WriteString(fmt.Sprintf("%s:%s;", field.Name, field.Type))
-			}
-
-			if tableSig.String() == signature {
-				return toPascalCase(singularize(table.Rel.Name))
-			}
-		}
-		}
+	// Check if we have a struct with this signature from the deduplication process
+	if structName, exists := g.signatureToStruct[signature]; exists {
+		return structName
 	}
 
-	// No matching table struct found, use query-specific name
+	// Fallback: generate query-specific name (shouldn't happen if models were generated first)
 	structName := toPascalCase(query.Name)
 	if query.Cmd == ":one" || query.Cmd == ":many" {
 		structName = structName + "Row"
@@ -589,12 +567,13 @@ type sqlcSliceParam struct {
 }
 
 type templateData struct {
-	Package      string
-	Structs      []*crystalStruct
-	Queries      []crystalQuery
-	EmitJSONTags bool
-	EmitDBTags   bool
-	Engine       string
+	Package                   string
+	Structs                   []*crystalStruct
+	Queries                   []crystalQuery
+	EmitJSONTags              bool
+	EmitDBTags                bool
+	EmitBooleanQuestionGetters bool
+	Engine                    string
 }
 
 // generateConnectionManager generates the database.cr file with connection management
@@ -865,13 +844,13 @@ func (g *Generator) buildCrystalQuery(query *plugin.Query) crystalQuery {
 		return cq.Params[i].Position < cq.Params[j].Position
 	})
 
-	// Determine return type
+	// Determine return type using deduplicated struct names (same logic as generateQueries)
 	switch query.Cmd {
 	case ":one":
 		if len(query.Columns) == 1 {
 			cq.ReturnType = g.crystalType(query.Columns[0])
 		} else {
-			cq.ReturnType = toPascalCase(query.Name) + "Row"
+			cq.ReturnType = g.getStructNameForQuery(query)
 		}
 		cq.ReturnType += "?"
 	case ":many":
@@ -879,7 +858,7 @@ func (g *Generator) buildCrystalQuery(query *plugin.Query) crystalQuery {
 			cq.ReturnType = "Array(" + g.crystalType(query.Columns[0]) + ")"
 			cq.SingleColumnType = g.crystalType(query.Columns[0])
 		} else {
-			cq.ReturnType = "Array(" + toPascalCase(query.Name) + "Row)"
+			cq.ReturnType = "Array(" + g.getStructNameForQuery(query) + ")"
 		}
 	case ":exec":
 		cq.ReturnType = "Nil"
@@ -893,11 +872,15 @@ func (g *Generator) buildCrystalQuery(query *plugin.Query) crystalQuery {
 		cq.ReturnType = "Int64"  // Will return number of rows copied
 	}
 
-	// Check if result is single column non-struct
-	if len(query.Columns) == 1 {
-		cq.SingleColumnType = g.crystalType(query.Columns[0])
-	} else if len(query.Columns) > 1 {
-		cq.ResultStruct = toPascalCase(query.Name) + "Row"
+	// Set the result struct name if needed using deduplicated names
+	if len(query.Columns) > 1 && (query.Cmd == ":one" || query.Cmd == ":many") {
+		// Use deduplicated struct name
+		cq.ResultStruct = g.getStructNameForQuery(query)
+	} else if len(query.Columns) == 1 && (query.Cmd == ":one" || query.Cmd == ":many") {
+		// For single column queries, store the actual type (without ? or Array)
+		if query.Cmd == ":one" {
+			cq.SingleColumnType = g.crystalType(query.Columns[0])
+		}
 	}
 
 	return cq

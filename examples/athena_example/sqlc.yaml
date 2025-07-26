@@ -14,3 +14,6 @@ sql:
           module: "Blog"
           emit_json_tags: true
           emit_db_tags: true
+          emit_boolean_question_getters: true
+          generate_connection_manager: true
+          generate_repositories: true

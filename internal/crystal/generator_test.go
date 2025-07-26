@@ -701,3 +701,152 @@ func TestParamNamesFunction(t *testing.T) {
 		})
 	}
 }
+
+func TestBooleanQuestionGetters(t *testing.T) {
+	req := &plugin.GenerateRequest{
+		Settings: &plugin.Settings{
+			Engine: "postgresql",
+		},
+		Catalog: &plugin.Catalog{
+			Schemas: []*plugin.Schema{
+				{
+					Name: "public",
+					Tables: []*plugin.Table{
+						{
+							Rel: &plugin.Identifier{
+								Name: "users",
+							},
+							Columns: []*plugin.Column{
+								{
+									Name:    "id",
+									Type:    &plugin.Identifier{Name: "int4"},
+									NotNull: true,
+								},
+								{
+									Name:    "name",
+									Type:    &plugin.Identifier{Name: "text"},
+									NotNull: true,
+								},
+								{
+									Name:    "is_active",
+									Type:    &plugin.Identifier{Name: "bool"},
+									NotNull: true,
+								},
+								{
+									Name:    "is_verified",
+									Type:    &plugin.Identifier{Name: "bool"},
+									NotNull: false, // nullable boolean
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	t.Run("with boolean question getters disabled", func(t *testing.T) {
+		gen := NewGenerator(req, "db", GeneratorOptions{
+			EmitBooleanQuestionGetters: false,
+		})
+
+		resp, err := gen.Generate(context.Background())
+		if err != nil {
+			t.Fatalf("Generate() error = %v", err)
+		}
+
+		if len(resp.Files) != 1 {
+			t.Fatalf("Expected 1 file, got %d", len(resp.Files))
+		}
+
+		modelsContent := string(resp.Files[0].Contents)
+
+		// Should use regular getters for boolean fields
+		if !strings.Contains(modelsContent, "getter is_active : Bool") {
+			t.Error("Should use regular getter for boolean field when option is disabled")
+		}
+
+		if !strings.Contains(modelsContent, "getter is_verified : Bool?") {
+			t.Error("Should use regular getter for nullable boolean field when option is disabled")
+		}
+
+		// Should not contain question mark getters
+		if strings.Contains(modelsContent, "getter? is_active") {
+			t.Error("Should not use question mark getter when option is disabled")
+		}
+
+		if strings.Contains(modelsContent, "getter? is_verified") {
+			t.Error("Should not use question mark getter when option is disabled")
+		}
+	})
+
+	t.Run("with boolean question getters enabled", func(t *testing.T) {
+		gen := NewGenerator(req, "db", GeneratorOptions{
+			EmitBooleanQuestionGetters: true,
+		})
+
+		resp, err := gen.Generate(context.Background())
+		if err != nil {
+			t.Fatalf("Generate() error = %v", err)
+		}
+
+		if len(resp.Files) != 1 {
+			t.Fatalf("Expected 1 file, got %d", len(resp.Files))
+		}
+
+		modelsContent := string(resp.Files[0].Contents)
+
+		// Should use question mark getters for boolean fields
+		if !strings.Contains(modelsContent, "getter? is_active : Bool") {
+			t.Error("Should use question mark getter for boolean field when option is enabled")
+		}
+
+		if !strings.Contains(modelsContent, "getter? is_verified : Bool?") {
+			t.Error("Should use question mark getter for nullable boolean field when option is enabled")
+		}
+
+		// Should not contain regular getters for boolean fields
+		if strings.Contains(modelsContent, "getter is_active : Bool") {
+			t.Error("Should not use regular getter for boolean field when option is enabled")
+		}
+
+		if strings.Contains(modelsContent, "getter is_verified : Bool?") {
+			t.Error("Should not use regular getter for nullable boolean field when option is enabled")
+		}
+
+		// Non-boolean fields should still use regular getters
+		if !strings.Contains(modelsContent, "getter id : Int32") {
+			t.Error("Non-boolean fields should use regular getters")
+		}
+
+		if !strings.Contains(modelsContent, "getter name : String") {
+			t.Error("Non-boolean fields should use regular getters")
+		}
+	})
+}
+
+func TestIsBooleanType(t *testing.T) {
+	tests := []struct {
+		name         string
+		crystalType  string
+		expected     bool
+	}{
+		{"bool type", "Bool", true},
+		{"nullable bool type", "Bool?", true},
+		{"string type", "String", false},
+		{"nullable string type", "String?", false},
+		{"int type", "Int32", false},
+		{"nullable int type", "Int32?", false},
+		{"empty string", "", false},
+		{"boolean lowercase", "bool", false}, // Crystal uses Bool, not bool
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := isBooleanType(tt.crystalType)
+			if result != tt.expected {
+				t.Errorf("isBooleanType(%s) = %v, expected %v", tt.crystalType, result, tt.expected)
+			}
+		})
+	}
+}
