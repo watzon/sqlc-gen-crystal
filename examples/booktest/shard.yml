@@ -1,8 +1,0 @@
-name: booktest
-version: 0.1.0
-
-dependencies:
-  db:
-    github: crystal-lang/crystal-db
-  pg:
-    github: will/crystal-pg

@@ -1,0 +1,148 @@
+require "athena"
+require "db"
+require "sqlite3"
+require "./db/*"
+
+# Simple blog API built with Athena Framework and sqlc-gen-crystal
+class BlogController < ATH::Controller
+  @@db : DB::Database?
+  @@queries : Blog::Queries?
+
+  # Database connection
+  private def db
+    @@db ||= DB.open("sqlite3:./blog.db")
+  end
+
+  private def queries
+    @@queries ||= Blog::Queries.new(db)
+  end
+
+  # Initialize database
+  @[ARTA::Get("/init")]
+  def init_db : String
+    schema = File.read("schema.sql")
+    db.exec(schema)
+    "Database initialized!"
+  end
+
+  # Users endpoints
+  @[ARTA::Post("/users")]
+  def create_user(request : ATH::Request) : Blog::User?
+    body_str = request.body.try &.gets_to_end
+    raise ATH::Exception::BadRequest.new "Request body is empty." unless body_str
+
+    body = UserCreateRequest.from_json(body_str)
+    queries.create_user(
+      username: body.username,
+      email: body.email,
+      password_hash: body.password_hash,
+      display_name: body.display_name,
+      bio: body.bio
+    )
+  end
+
+  @[ARTA::Get("/users/{id}")]
+  def get_user(id : Int64) : Blog::User?
+    queries.get_user(id)
+  end
+
+  # Posts endpoints
+  @[ARTA::Get("/posts")]
+  def list_posts(limit : Int64 = 10, offset : Int64 = 0) : Array(Blog::GetPostRow)
+    queries.list_posts(limit, offset)
+  end
+
+  @[ARTA::Get("/posts/{slug}")]
+  def get_post_by_slug(slug : String) : Blog::GetPostRow?
+    queries.get_post_by_slug(slug)
+  end
+
+  @[ARTA::Post("/posts")]
+  def create_post(request : ATH::Request) : Blog::Post?
+    body_str = request.body.try &.gets_to_end
+    raise ATH::Exception::BadRequest.new "Request body is empty." unless body_str
+
+    body = PostCreateRequest.from_json(body_str)
+    queries.create_post(
+      body.user_id,
+      body.title,
+      body.slug,
+      body.content,
+      body.excerpt,
+      body.published,
+      body.published ? "1" : "0" # This is the arg7 parameter for the CASE WHEN clause
+    )
+  end
+
+  @[ARTA::Post("/posts/{id}/publish")]
+  def publish_post(id : Int64, user_id : Int64) : Nil
+    queries.publish_post(id, user_id)
+    nil
+  end
+
+  @[ARTA::Delete("/posts/{id}")]
+  def delete_post(id : Int64, user_id : Int64) : Nil
+    queries.delete_post(id, user_id)
+    nil
+  end
+
+  # Tags endpoints
+  @[ARTA::Get("/tags")]
+  def list_tags : Array(Blog::Tag)
+    queries.list_tags
+  end
+
+  @[ARTA::Post("/tags")]
+  def create_tag(request : ATH::Request) : Blog::Tag?
+    body_str = request.body.try &.gets_to_end
+    raise ATH::Exception::BadRequest.new "Request body is empty." unless body_str
+
+    body = TagCreateRequest.from_json(body_str)
+    queries.create_tag(
+      name: body.name,
+      slug: body.slug,
+      description: body.description
+    )
+  end
+
+  @[ARTA::Get("/tags/{slug}/posts")]
+  def get_posts_by_tag(slug : String, limit : Int64 = 10, offset : Int64 = 0) : Array(Blog::GetPostRow)
+    tag = queries.get_tag_by_slug(slug)
+    return [] of Blog::GetPostRow unless tag
+
+    queries.get_posts_by_tag(tag.id, limit, offset)
+  end
+end
+
+# Request DTOs
+struct UserCreateRequest
+  include JSON::Serializable
+
+  getter username : String
+  getter email : String
+  getter password_hash : String
+  getter display_name : String?
+  getter bio : String?
+end
+
+struct PostCreateRequest
+  include JSON::Serializable
+
+  getter user_id : Int64
+  getter title : String
+  getter slug : String
+  getter content : String
+  getter excerpt : String?
+  getter published : Bool = false
+end
+
+struct TagCreateRequest
+  include JSON::Serializable
+
+  getter name : String
+  getter slug : String
+  getter description : String?
+end
+
+# Start the server
+Athena::Framework.run

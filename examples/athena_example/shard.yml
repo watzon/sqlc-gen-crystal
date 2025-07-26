@@ -1,0 +1,29 @@
+name: athena_example
+version: 0.1.0
+
+description: |
+  A simple blog API built with Athena Framework and sqlc-gen-crystal
+
+authors:
+  - Chris Watson <cawatson1993@gmail.com>
+
+dependencies:
+  athena:
+    github: athena-framework/framework
+    version: ~> 0.20.0
+  sqlite3:
+    github: crystal-lang/crystal-sqlite3
+    version: ~> 0.21.0
+  db:
+    github: crystal-lang/crystal-db
+    version: ~> 0.13.0
+
+targets:
+  athena_example:
+    main: src/athena_example.cr
+  setup_db:
+    main: setup_db.cr
+
+crystal: ">= 1.17.1"
+
+license: MIT
