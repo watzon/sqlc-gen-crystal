@@ -4,8 +4,8 @@ plugins:
     process:
       cmd: /Users/watzon/Projects/personal/sqlc-gen-crystal/bin/sqlc-gen-crystal
 sql:
-  - schema: "schema.sql"
-    queries: "queries.sql"
+  - schema: "sqlc/schema.sql"
+    queries: "sqlc/queries.sql"
     engine: sqlite
     codegen:
       - out: src/db

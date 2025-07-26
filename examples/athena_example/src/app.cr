@@ -16,7 +16,7 @@ class BlogController < ATH::Controller
   @[ARTA::Get("/init")]
   def init_db : String
     setup_database
-    schema = File.read("schema.sql")
+    schema = File.read("sqlc/schema.sql")
     Blog::Database.connection.exec(schema)
     "Database initialized!"
   end
@@ -51,7 +51,7 @@ class BlogController < ATH::Controller
   def list_posts(limit : Int64 = 10, offset : Int64 = 0) : Array(Blog::GetPostRow)
     setup_database
     posts_repo = Blog::PostsRepository.new
-    posts_repo.all(limit, offset)
+    posts_repo.all(limit: limit, offset: offset)
   end
 
   @[ARTA::Get("/posts/{slug}")]
@@ -70,13 +70,13 @@ class BlogController < ATH::Controller
     body = PostCreateRequest.from_json(body_str)
     posts_repo = Blog::PostsRepository.new
     posts_repo.create(
-      body.user_id,
-      body.title,
-      body.slug,
-      body.content,
-      body.excerpt,
-      body.published?,
-      body.published? ? "1" : "0" # This is the arg7 parameter for the CASE WHEN clause
+      user_id: body.user_id,
+      title: body.title,
+      slug: body.slug,
+      content: body.content,
+      excerpt: body.excerpt,
+      published: body.published?,
+      arg7: body.published? ? "1" : "0" # This is the arg7 parameter for the CASE WHEN clause
     )
   end
 
@@ -84,7 +84,7 @@ class BlogController < ATH::Controller
   def publish_post(id : Int64, user_id : Int64) : Nil
     setup_database
     posts_repo = Blog::PostsRepository.new
-    posts_repo.publish_post(id, user_id)
+    posts_repo.publish_post(id: id, user_id: user_id)
     nil
   end
 
@@ -92,7 +92,7 @@ class BlogController < ATH::Controller
   def delete_post(id : Int64, user_id : Int64) : Nil
     setup_database
     posts_repo = Blog::PostsRepository.new
-    posts_repo.delete(id, user_id)
+    posts_repo.delete(id: id, user_id: user_id)
     nil
   end
 
@@ -128,7 +128,7 @@ class BlogController < ATH::Controller
     tag = tags_repo.find_by_slug(slug)
     return [] of Blog::GetPostRow unless tag
 
-    posts_repo.finds_by_tag(tag.id, limit, offset)
+    posts_repo.finds_by_tag(tag_id: tag.id, limit: limit, offset: offset)
   end
 end
 

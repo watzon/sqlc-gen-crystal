@@ -19,7 +19,7 @@ dependencies:
     version: ~> 0.13.0
 
 targets:
-  athena_example:
+  app:
     main: src/app.cr
   setup_db:
     main: setup_db.cr

@@ -12,7 +12,7 @@ def setup_database
   
   # Create new database and run schema
   DB.open("sqlite3:./blog.db") do |db|
-    schema = File.read("schema.sql")
+    schema = File.read("sqlc/schema.sql")
     
     # Split schema into individual statements and execute them
     statements = schema.split(';').map(&.strip).reject(&.empty?)
@@ -98,7 +98,7 @@ def setup_database
     puts "  • User: john_doe (john@example.com)"
     puts "  • Tags: Crystal, Web Development"
     puts "  • Posts: 3 posts (2 published, 1 draft)"
-    puts "\nYou can now start the server with: ./bin/athena_example"
+    puts "\nYou can now start the server with: ./bin/app"
   end
 rescue ex
   puts "❌ Error setting up database: #{ex.message}"
