@@ -42,6 +42,32 @@ The `sqlc-gen-crystal` binary will be installed to your `$GOPATH/bin` directory.
 
 ## Usage
 
+### Database Dependencies
+
+Before using the generated code, you must add the appropriate database driver to your Crystal project dependencies and import it in your application code.
+
+**Add to your `shard.yml`:**
+
+```yaml
+dependencies:
+  crystal-db:
+    github: crystal-lang/crystal-db
+  # Choose ONE of the following based on your database:
+  crystal-pg:        # PostgreSQL
+    github: will/crystal-pg
+  crystal-mysql:      # MySQL
+    github: crystal-lang/crystal-mysql
+  crystal-sqlite3:    # SQLite
+    github: crystal-lang/crystal-sqlite3
+```
+
+**Install dependencies:**
+```bash
+shards install
+```
+
+### SQLC Configuration
+
 ```yaml
 version: "2"
 plugins:
@@ -110,10 +136,12 @@ $ sqlc generate
 Use the generated code:
 
 ```crystal
+# Required imports
 require "db"
-require "pg"
+require "pg"                    # or require "mysql" / require "sqlite3"
 require "./src/db"
 
+# Connect to your database
 DB.open("postgres://localhost/myapp") do |db|
   queries = MyApp::Queries.new(db)
 
@@ -131,11 +159,16 @@ DB.open("postgres://localhost/myapp") do |db|
 end
 ```
 
+**Important:** The database driver import (`require "pg"`, `require "mysql"`, or `require "sqlite3"`) is **required** before using the generated code. The generated code uses the `crystal-db` interface, but you need to import the specific driver implementation that matches your database engine.
+
 ### Real-world Usage
 
 With the `generate_connection_manager` and `generate_repositories` options enabled (as shown in the configuration above), you get a clean, ready-to-use API:
 
 ```crystal
+# Required imports - make sure to include your database driver
+require "db"
+require "pg"                    # or require "mysql" / require "sqlite3"
 require "./src/db/database"
 
 # Simple repository usage
