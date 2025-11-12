@@ -128,9 +128,24 @@ UPDATE users
 SET name = @new_name, age = @new_age
 WHERE id = @user_id;
 
--- name: UpdateUserNullable :exec  
+-- name: UpdateUserNullable :exec
 UPDATE users
 SET
   name = coalesce(sqlc.narg('new_name'), name),
   age = coalesce(sqlc.narg('new_age'), age)
 WHERE id = sqlc.arg('user_id');
+
+-- name: GetAuditLogsByDateRange :many
+SELECT * FROM posts
+WHERE created_at >= ? AND created_at <= ?
+ORDER BY created_at DESC;
+
+-- name: FilterPostsByDateAndStatus :many
+SELECT * FROM posts
+WHERE created_at >= ? AND created_at <= ? AND published = ?
+ORDER BY created_at DESC;
+
+-- name: GetPostsByIds :many
+SELECT * FROM posts
+WHERE id IN (?, ?, ?)
+ORDER BY created_at DESC;
