@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 	"text/template"
@@ -27,6 +28,7 @@ type Generator struct {
 	pkg                string
 	options            GeneratorOptions
 	signatureToStruct  map[string]string // Maps field signatures to struct names
+	warnings           []string           // Warnings collected during generation
 }
 
 // NewGenerator creates a new Crystal code generator
@@ -36,6 +38,23 @@ func NewGenerator(req *plugin.GenerateRequest, pkg string, options GeneratorOpti
 		pkg:               pkg,
 		options:           options,
 		signatureToStruct: make(map[string]string),
+		warnings:          make([]string, 0),
+	}
+}
+
+// addWarning adds a warning to the generator's warning collection
+func (g *Generator) addWarning(message string) {
+	g.warnings = append(g.warnings, message)
+}
+
+// emitWarnings writes all collected warnings to stderr
+func (g *Generator) emitWarnings() {
+	if len(g.warnings) > 0 {
+		fmt.Fprintln(os.Stderr, "sqlc-gen-crystal warnings:")
+		for i, warning := range g.warnings {
+			fmt.Fprintf(os.Stderr, "  %d. %s\n", i+1, warning)
+		}
+		fmt.Fprintln(os.Stderr, "  Use sqlc.arg() or @ syntax for explicit parameter naming to avoid these warnings.")
 	}
 }
 
@@ -82,6 +101,9 @@ func (g *Generator) Generate(ctx context.Context) (*plugin.GenerateResponse, err
 		}
 		resp.Files = append(resp.Files, repoFiles...)
 	}
+
+	// Emit any warnings that were collected during generation
+	g.emitWarnings()
 
 	return &resp, nil
 }
@@ -373,6 +395,9 @@ func (g *Generator) generateQueries() (*plugin.File, error) {
 
 		// Build parameter list
 		hasSlice := false
+		// Track used parameter names to avoid duplicates
+		usedNames := make(map[string]int)
+
 		for _, param := range query.Params {
 			p := crystalParam{
 				Name:     fmt.Sprintf("arg%d", param.Number),
@@ -382,7 +407,34 @@ func (g *Generator) generateQueries() (*plugin.File, error) {
 
 			// Try to get a better name from the column
 			if param.Column.Name != "" {
-				p.Name = toSnakeCase(param.Column.Name)
+				baseName := toSnakeCase(param.Column.Name)
+
+				// Check for name conflicts and add suffix if needed
+				if count, exists := usedNames[baseName]; exists {
+					// Name already used, add numeric suffix
+					p.Name = fmt.Sprintf("%s_%d", baseName, count+1)
+					usedNames[baseName] = count + 1
+
+					// Add warning for this query
+					g.addWarning(fmt.Sprintf("Query '%s' has duplicate parameter name '%s'. Consider using sqlc.arg('%s_1') and sqlc.arg('%s_2') or @%s_1 and @%s_2 for explicit naming.",
+						query.Name, baseName, baseName, baseName, baseName, baseName))
+				} else {
+					// First use of this name
+					p.Name = baseName
+					usedNames[baseName] = 1
+				}
+			} else {
+				// For argN names, also track to avoid conflicts
+				baseName := p.Name
+				if count, exists := usedNames[baseName]; exists {
+					p.Name = fmt.Sprintf("%s_%d", baseName, count+1)
+					usedNames[baseName] = count + 1
+
+					// Add warning for this query
+					g.addWarning(fmt.Sprintf("Query '%s' has duplicate parameter name '%s'. Consider using sqlc.arg() syntax for explicit naming.", query.Name, baseName))
+				} else {
+					usedNames[baseName] = 1
+				}
 			}
 			
 			// Check if this parameter is used with sqlc.slice()
@@ -795,6 +847,9 @@ func (g *Generator) buildCrystalQuery(query *plugin.Query) crystalQuery {
 
 	// Build parameters
 	hasSlice := false
+	// Track used parameter names to avoid duplicates
+	usedNames := make(map[string]int)
+
 	for i, param := range query.Params {
 		p := crystalParam{
 			Name:     fmt.Sprintf("arg%d", i+1),
@@ -804,7 +859,34 @@ func (g *Generator) buildCrystalQuery(query *plugin.Query) crystalQuery {
 
 		// Use column name if available
 		if param.Column != nil && param.Column.Name != "" {
-			p.Name = toSnakeCase(param.Column.Name)
+			baseName := toSnakeCase(param.Column.Name)
+
+			// Check for name conflicts and add suffix if needed
+			if count, exists := usedNames[baseName]; exists {
+				// Name already used, add numeric suffix
+				p.Name = fmt.Sprintf("%s_%d", baseName, count+1)
+				usedNames[baseName] = count + 1
+
+				// Add warning for this query
+				g.addWarning(fmt.Sprintf("Query '%s' has duplicate parameter name '%s'. Consider using sqlc.arg('%s_1') and sqlc.arg('%s_2') or @%s_1 and @%s_2 for explicit naming.",
+					query.Name, baseName, baseName, baseName, baseName, baseName))
+			} else {
+				// First use of this name
+				p.Name = baseName
+				usedNames[baseName] = 1
+			}
+		} else {
+			// For argN names, also track to avoid conflicts
+			baseName := p.Name
+			if count, exists := usedNames[baseName]; exists {
+				p.Name = fmt.Sprintf("%s_%d", baseName, count+1)
+				usedNames[baseName] = count + 1
+
+				// Add warning for this query
+				g.addWarning(fmt.Sprintf("Query '%s' has duplicate parameter name '%s'. Consider using sqlc.arg() syntax for explicit naming.", query.Name, baseName))
+			} else {
+				usedNames[baseName] = 1
+			}
 		}
 		
 		// Check if this parameter is used with sqlc.slice()
