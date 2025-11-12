@@ -50,14 +50,12 @@ Before using the generated code, you must add the appropriate database driver to
 
 ```yaml
 dependencies:
-  crystal-db:
-    github: crystal-lang/crystal-db
   # Choose ONE of the following based on your database:
-  crystal-pg:        # PostgreSQL
+  pg:        # PostgreSQL
     github: will/crystal-pg
-  crystal-mysql:      # MySQL
+  mysql:      # MySQL
     github: crystal-lang/crystal-mysql
-  crystal-sqlite3:    # SQLite
+  sqlite3:    # SQLite
     github: crystal-lang/crystal-sqlite3
 ```
 
@@ -137,9 +135,8 @@ Use the generated code:
 
 ```crystal
 # Required imports
-require "db"
 require "pg"                    # or require "mysql" / require "sqlite3"
-require "./src/db"
+require "./src/db/database"
 
 # Connect to your database
 DB.open("postgres://localhost/myapp") do |db|
@@ -167,7 +164,6 @@ With the `generate_connection_manager` and `generate_repositories` options enabl
 
 ```crystal
 # Required imports - make sure to include your database driver
-require "db"
 require "pg"                    # or require "mysql" / require "sqlite3"
 require "./src/db/database"
 
